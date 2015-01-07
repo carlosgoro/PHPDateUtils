@@ -548,7 +548,7 @@ class DateUtils
         $startWeek  = (int)date('W', self::timeFromDate($startDate, 0));
         $endYear    = date('Y', self::timeFromDate($endDate, 0));
         $endWeek    = (int)date('W', self::timeFromDate($endDate, 0));
-        $startMonth =  date('n', self::timeFromDate($startDate, 0));
+        $startMonth = date('n', self::timeFromDate($startDate, 0));
 
         // If the last week of a year is 1, in fact is the first week of the next year
         if ($startWeek == 1 && $startMonth == 12) {
@@ -590,6 +590,7 @@ class DateUtils
             $year  = date('Y', self::timeFromDate($startDate, 0));
             $week  = (int)date('W', self::timeFromDate($startDate, 0));
             $month = (int)date('n', self::timeFromDate($startDate, 0));
+
             $yearPatch = 0;
             if ($week == 1 && $month == 12) {
                 $yearPatch = 1;
@@ -618,6 +619,7 @@ class DateUtils
             $year  = date('Y', self::timeFromDate($startDate, 0));
             $week  = (int)date('W', self::timeFromDate($startDate, 0));
             $month = (int)date('n', self::timeFromDate($startDate, 0));
+
             $yearPatch = 0;
             if ($week == 1 && $month == 12) {
                 $yearPatch = 1;
@@ -646,6 +648,7 @@ class DateUtils
             $year  = date('Y', self::timeFromDate($startDate, 0));
             $week  = (int)date('W', self::timeFromDate($startDate, 0));
             $month = (int)date('n', self::timeFromDate($startDate, 0));
+
             $yearPatch = 0;
             if ($week == 1 && $month == 12) {
                 $yearPatch = 1;
@@ -675,11 +678,6 @@ class DateUtils
      * @return array
      */
     public static function getFortnightsBetweenDatesByYear($startDate, $endDate, $format = 0) {
-        $startYear  = date('Y', self::timeFromDate($startDate, 0));
-        $startMonth = date('n', self::timeFromDate($startDate, 0));
-        $endYear    = date('Y', self::timeFromDate($endDate, 0));
-        $endMonth   = date('n', self::timeFromDate($endDate, 0));
-
         switch ($format) {
             case 0:
                 $fortnights = self::getFortnightsBetweenDatesByYear0($startDate, $endDate);
