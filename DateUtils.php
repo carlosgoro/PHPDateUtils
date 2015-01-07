@@ -17,6 +17,13 @@ class DateUtils
      * @var string
      */
     private static $dateFormat = 'Y-m-d';
+	
+	/**
+     * Default datetime format
+     * @var string
+     */
+    private static $datetimeFormat = 'Y-m-d H:i:s';
+	
 
     /**
      * Get the timestamp of a week/year.
@@ -117,6 +124,81 @@ class DateUtils
      */
     public static function lastDayOfWeek ($weekNumber, $year) {
         return new \Datetime(self::lastDayOfWeekAsString($weekNumber, $year));
+    }
+
+
+    /**
+     * Get the first day of a month as string
+     *
+     * @param int $month
+     * @param int $year
+     *
+     * @return bool|string
+     */
+    public static function firstDayOfMonthAsString ($month, $year) {
+        return date(self::$dateFormat, self::firstDayOfMonthAsTimestamp($month, $year));
+    }
+
+    /**
+     * Get the first day of a month as timestamp
+     *
+     * @param int $month
+     * @param int $year
+     *
+     * @return int
+     */
+    public static function firstDayOfMonthAsTimestamp ($month, $year) {
+		return self::firstDayOfMonth($month, $year)->getTimestamp();
+    }
+
+    /**
+     * Get the first day of a month as datetime object
+     *
+     * @param int $month
+     * @param int $year
+     *
+     * @return \Datetime
+     */
+    public static function firstDayOfMonth ($month, $year) {
+        $date = new \Datetime($year.'-'.$month.'-01');
+		return $date;
+    }
+
+    /**
+     * Get the last day of a month as string
+     *
+     * @param int $month
+     * @param int $year
+     *
+     * @return bool|string
+     */
+    public static function lastDayOfMonthAsString ($month, $year) {
+        return date(self::$dateFormat, self::lastDayOfMonthAsTimestamp($month, $year));
+    }
+
+    /**
+     * Get the last day of a month as timestamp
+     *
+     * @param int $month
+     * @param int $year
+     *
+     * @return int
+     */
+    public static function lastDayOfMonthAsTimestamp ($month, $year) {
+		return self::lastDayOfMonth($month, $year)->getTimestamp();
+    }
+
+    /**
+     * Get the last day of a month as datetime object
+     *
+     * @param int $month
+     * @param int $year
+     *
+     * @return \Datetime
+     */
+    public static function lastDayOfMonth ($month, $year) {
+        $date = new \Datetime($year.'-'.$month.'-01');
+		return $date->modify('last day of this month');
     }
 
     /**
@@ -373,7 +455,7 @@ class DateUtils
     }
 
     /**
-     * Get an array with the months between two months/years grouped by years as array[0..n]([year][month][data])
+     * Get an array with the months between two months/years grouped by years as array[0..n]([year][month][firstDay][lastDay][data])
      *
      * @param int $startYear
      * @param int $startMonth
@@ -386,9 +468,11 @@ class DateUtils
         $months = array();
         while ( ($startYear < $endYear) || ($startYear == $endYear && $startMonth <= $endMonth) ) {
             $months[] = array(
-                'year'  => $startYear,
-                'month' => $startMonth,
-                'data'  => null
+                'year'     => $startYear,
+                'month'    => $startMonth,
+				'firstDay' => self::firstDayOfMonth($startMonth, $startYear),
+				'lastDay'  => self::lastDayOfMonth($startMonth, $startYear),
+                'data'     => null
             );
             $startMonth++;
             if ($startMonth >= 13) {
@@ -449,14 +533,19 @@ class DateUtils
      * @return array[int][int]
      */
     private static function getWeeksBetweenDatesByYear0 ($startYear, $startWeek, $endYear, $endWeek) {
-        $weeks = array();
-        while ( ($startYear < $endYear) || ($startYear == $endYear && $startWeek <= $endWeek) ) {
-            $weeks[$startYear][$startWeek] = null;
-            $startWeek++;
-            if ($startWeek >= 53) {
-                $startWeek = 1;
-                $startYear++;
-            }
+		$startDate = self::firstDayOfWeek($startWeek, $startYear);
+		$endDate   = self::lastDayOfWeek($endWeek, $endYear);
+        $weeks     = array();
+        while ($startDate < $endDate) {
+			$year  = date('Y', self::timeFromDate($startDate, 0));
+			$week  = (int)date('W', self::timeFromDate($startDate, 0));
+			$month = (int)date('n', self::timeFromDate($startDate, 0));
+			$yearPatch = 0;
+			if ($week == 1 && $month == 12) {
+				$yearPatch = 1;
+			}
+			$weeks[$year+$yearPatch][$week] = null;
+			$startDate->setTimestamp(self::timeFromDate($startDate, 7));
         }
         return $weeks;
     }
@@ -472,20 +561,25 @@ class DateUtils
      * @return array[int][int]
      */
     private static function getWeeksBetweenDatesByYear1 ($startYear, $startWeek, $endYear, $endWeek) {
-        $weeks = array();
-        while ( ($startYear < $endYear) || ($startYear == $endYear && $startWeek <= $endWeek) ) {
-            $weeks[$startYear][] = $startWeek;
-            $startWeek++;
-            if ($startWeek >= 53) {
-                $startWeek = 1;
-                $startYear++;
-            }
+		$startDate = self::firstDayOfWeek($startWeek, $startYear);
+		$endDate   = self::lastDayOfWeek($endWeek, $endYear);
+        $weeks     = array();
+        while ($startDate < $endDate) {
+			$year  = date('Y', self::timeFromDate($startDate, 0));
+			$week  = (int)date('W', self::timeFromDate($startDate, 0));
+			$month = (int)date('n', self::timeFromDate($startDate, 0));
+			$yearPatch = 0;
+			if ($week == 1 && $month == 12) {
+				$yearPatch = 1;
+			}
+			$weeks[$year+$yearPatch][] = $week;
+			$startDate->setTimestamp(self::timeFromDate($startDate, 7));
         }
         return $weeks;
     }
 
     /**
-     * Get an array with the weeks between two weeks/years grouped by years as array[0..n]([year][week][data])
+     * Get an array with the weeks between two weeks/years grouped by years as array[0..n]([year][week][firstDay][lastDay][data])
      *
      * @param int $startYear
      * @param int $startWeek
@@ -495,18 +589,25 @@ class DateUtils
      * @return array[int][mixed]
      */
     private static function getWeeksBetweenDatesByYear2 ($startYear, $startWeek, $endYear, $endWeek) {
-        $weeks = array();
-        while ( ($startYear < $endYear) || ($startYear == $endYear && $startWeek <= $endWeek) ) {
+		$startDate = self::firstDayOfWeek($startWeek, $startYear);
+		$endDate   = self::lastDayOfWeek($endWeek, $endYear);
+        $weeks     = array();
+        while ($startDate < $endDate) {
+			$year  = date('Y', self::timeFromDate($startDate, 0));
+			$week  = (int)date('W', self::timeFromDate($startDate, 0));
+			$month = (int)date('n', self::timeFromDate($startDate, 0));
+			$yearPatch = 0;
+			if ($week == 1 && $month == 12) {
+				$yearPatch = 1;
+			}
             $weeks[] = array(
-                'year'  => $startYear,
-                'week' => $startWeek,
-                'data'  => null
+                'year'     => $year+$yearPatch,
+                'week'     => $week,
+				'firstDay' => self::firstDayOfWeek($week, $year),
+				'lastDay'  => self::lastDayOfWeek($week, $year),
+                'data'     => null
             );
-            $startWeek++;
-            if ($startWeek >= 53) {
-                $startWeek = 1;
-                $startYear++;
-            }
+			$startDate->setTimestamp(self::timeFromDate($startDate, 7));
         }
         return $weeks;
     }
