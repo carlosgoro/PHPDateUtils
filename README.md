@@ -1,6 +1,6 @@
 PHPUtils
 ========
-A collection of useful PHP classes
+A collection of useful PHP classes based on my own needs.
 
 DateUtils
 ---------
