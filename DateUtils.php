@@ -126,7 +126,6 @@ class DateUtils
         return new \Datetime(self::lastDayOfWeekAsString($weekNumber, $year));
     }
 
-
     /**
      * Get the first day of a month as string
      *
@@ -160,8 +159,7 @@ class DateUtils
      * @return \Datetime
      */
     public static function firstDayOfMonth ($month, $year) {
-        $date = new \Datetime($year.'-'.$month.'-01');
-		return $date;
+        return new \Datetime($year.'-'.$month.'-01');
     }
 
     /**
@@ -200,6 +198,58 @@ class DateUtils
         $date = new \Datetime($year.'-'.$month.'-01');
 		return $date->modify('last day of this month');
     }
+
+    /**
+     * Get a day of a month as string
+     *
+     * @param int $day
+	 * @param int $month
+     * @param int $year
+     *
+     * @return bool|string
+     */
+    public static function dayOfMonthAsString ($day, $month, $year) {
+		return date(self::$dateFormat, self::dayOfMonthAsTimestamp($day, $month, $year));
+    }
+
+    /**
+     * Get a day of a month as timestamp
+     *
+	 * @param int $day
+     * @param int $month
+     * @param int $year
+     *
+     * @return int
+     */
+    public static function dayOfMonthAsTimestamp ($day, $month, $year) {
+		return self::dayOfMonth($day, $month, $year)->getTimestamp();
+    }
+
+    /**
+     * Get a day of a month as datetime object
+     *
+	 * @param int $day
+     * @param int $month
+     * @param int $year
+     *
+     * @return \Datetime
+     */
+    public static function dayOfMonth ($day, $month, $year) {
+        return new \Datetime($year.'-'.$month.'-'.$day);
+    }
+
+    /**
+     * Get a day of a year as datetime object
+     *
+	 * @param int $yearDay
+     * @param int $year
+     *
+     * @return \Datetime
+     */
+	public static function dayOfYear ($yearDay, $year) {
+		$date = new \Datetime($year.'-01-01');
+		return $date->modify('+'.($yearDay-1).' day');
+	}
 
     /**
      * Get an array with the days of a week as strings
@@ -259,7 +309,7 @@ class DateUtils
      */
     public static function getDaysBetweenDates ($startDate, $endDate) {
         $numDays = $startDate->diff($endDate)->days;
-        $days = array();
+        $days    = array();
         for ($i=0; $i<=$numDays+1; $i++) {
             $days[] = new \Datetime(date(self::$dateFormat, self::timeFromDate($startDate, $i) ));
         }
@@ -276,7 +326,7 @@ class DateUtils
      */
     public static function getDaysBetweenDatesAsString ($startDate, $endDate) {
         $numDays = $startDate->diff($endDate)->days;
-        $days = array();
+        $days    = array();
         for ($i=0; $i<=$numDays+1; $i++) {
             $days[] = date(self::$dateFormat, self::timeFromDate($startDate, $i));
         }
@@ -293,7 +343,7 @@ class DateUtils
      */
     public static function getDaysBetweenDatesAsTimestamp ($startDate, $endDate) {
         $numDays = $startDate->diff($endDate)->days+1;
-        $days = array();
+        $days    = array();
         for ($i=0; $i<=$numDays; $i++) {
             $days[] = self::timeFromDate($startDate, $i);
         }
@@ -371,8 +421,8 @@ class DateUtils
      * @return int
      */
     public static function dateFortnight ($date) {
-        $week = date('W', self::timeFromDate($date, 0));
-        return ((($week % 4) % 2) == 1 ? ($week + 1) / 2 : $week / 2);
+		$yearDay   = date('z', self::timeFromDate($date, 0));
+		return floor($yearDay/15);
     }
 
     /**
@@ -612,7 +662,114 @@ class DateUtils
         return $weeks;
     }
 
+	/**
+     * Get an array with the fortnights between two dates grouped by years.
+     * The array format depends on the $format parameter:
+	 *      0 : month fortnight
+	 *      1 : year fortnight
+     *
+     * @param \Datetime $startDate
+     * @param \Datetime $endDate
+     * @param int $format
+     *
+     * @return array
+     */
+    public static function getFortnightsBetweenDatesByYear($startDate, $endDate, $format = 0) {
+        $startYear  = date('Y', self::timeFromDate($startDate, 0));
+        $startMonth = date('n', self::timeFromDate($startDate, 0));
+        $endYear    = date('Y', self::timeFromDate($endDate, 0));
+        $endMonth   = date('n', self::timeFromDate($endDate, 0));
+
+        switch ($format) {
+            case 0:
+                $fortnights = self::getFortnightsBetweenDatesByYear0($startDate, $endDate);
+                break;
+            case 1:
+                $fortnights = self::getFortnightsBetweenDatesByYear1($startDate, $endDate);
+                break;
+            default:
+                $fortnights = self::getFortnightsBetweenDatesByYear0($startDate, $endDate);
+        }
+
+        return $fortnights;
+    }
+
+    /**
+     * Get an array with the fortnights between two dates grouped by years as array[0..n]([year][month][fortnight]([firstDay][lastDay][data]))
+     *
+     * @param \Datetime $startDate
+     * @param \Datetime $endDate
+     *
+     * @return array[int][mixed]
+     */
+    private static function getFortnightsBetweenDatesByYear0 ($startDate, $endDate) {
+        $startYear  = date('Y', self::timeFromDate($startDate, 0));
+        $startMonth = date('n', self::timeFromDate($startDate, 0));
+        $endYear    = date('Y', self::timeFromDate($endDate, 0));
+        $endMonth   = date('n', self::timeFromDate($endDate, 0));
+
+        $fortnights = array();
+        while ( ($startYear < $endYear) || ($startYear == $endYear && $startMonth <= $endMonth) ) {
+            $fortnights[] = array(
+                'year'     => $startYear,
+                'month'    => $startMonth,
+                'fortnight' => array(
+                    1 => array(
+                        'firstDay' => self::firstDayOfMonth($startMonth, $startYear),
+                        'lastDay'  => self::dayOfMonth(15, $startMonth, $startYear),
+						'data'     => null
+                    ),
+                    2 => array(
+                        'firstDay' => self::dayOfMonth(16, $startMonth, $startYear),
+                        'lastDay'  => self::lastDayOfMonth($startMonth, $startYear),
+						'data'     => null
+                    )
+                )
+            );
+            $startMonth++;
+            if ($startMonth >= 13) {
+                $startMonth = 1;
+                $startYear++;
+            }
+        }
+        return $fortnights;
+    }
+
+    /**
+     * Get an array with the year fortnights between two dates grouped by years as array[0..n]([year]([fortnight]([firstDay][lastDay][data]))
+     *
+     * @param \Datetime $startDate
+     * @param \Datetime $endDate
+     *
+     * @return array[int][mixed]
+     */
+	private static function getFortnightsBetweenDatesByYear1($startDate, $endDate) {
+		$startYear      = date('Y', self::timeFromDate($startDate, 0));
+		$startYearDay   = date('z', self::timeFromDate($startDate, 0));
+		$startFortnight = floor($startYearDay/15);
+		
+        $endYear      = date('Y', self::timeFromDate($endDate, 0));
+		$endYearDay   = date('z', self::timeFromDate($endDate, 0));
+		$endFortnight = floor($endYearDay/15);
+
+		$fortnights = array();
+		while ( ($startYear < $endYear) || ($startYear == $endYear && $startFortnight <= $endFortnight) ) {
+			$fortnights[] = array(
+				'year'      => $startYear,
+				'fortnight' => $startFortnight,
+				'firstDay'  => self::dayOfYear( ($startFortnight*15)+1, $startYear),
+				'lastDay'   => self::dayOfYear( ($startFortnight+1)*15, $startYear),
+				'data'      => null
+			);
+			$startFortnight++;
+			if ($startFortnight >= 25) {
+				$startFortnight = 1;
+				$startYear++;
+			}
+		}
+		
+		return $fortnights;
+	}
+
+
 }
-
-
-
