@@ -1,16 +1,5 @@
-PHPUtils
-========
-A collection of useful PHP classes based on my own needs.
+PHPDateUtils
+============
 
-DateUtils
----------
-Static methods to handle dates
-
-FileUtils
----------
-Coming soon
-
-NetUtils
---------
-Coming soon too ;-P
-
+A collection of useful static methods to handle dates.
+This piece of code is based on my own needs.
